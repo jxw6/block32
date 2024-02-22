@@ -1,29 +1,29 @@
 const pg = require("pg");
 const express = require("express");
 const client = new pg.Client(
-  process.env.DATABASE_URL || "postgres://localhost/the_acme_notes_db"
+  process.env.DATABASE_URL || "postgres://localhost/the_acme_icecream_db"
 );
 const app = express();
 
 app.use(express.json());
 app.use(require('morgan')('dev'));
-app.post('/api/notes', async (req, res, next) => {
+app.post('/api/flavors', async (req, res, next) => {
   try {
     const SQL = `
-    INSERT INTO notes(txt)
+    INSERT INTO flavors(name)
     VALUES($1)
     RETURNING *
     `
-    const response = await client.query(SQL, [req.body.txt])
+    const response = await client.query(SQL, [req.body.name])
     res.send(response.rows[0])
   } catch (err) {
     next(err)
   }
 });
-app.get('/api/notes', async (req, res, next) => {
+app.get('/api/flavors', async (req, res, next) => {
   try {
     const SQL = `
-    SELECT * from notes ORDER BY created_at DESC;
+    SELECT * from flavors ORDER BY created_at DESC;
     `;
     const response = await client.query(SQL)
     res.send(response.rows)
@@ -31,23 +31,23 @@ app.get('/api/notes', async (req, res, next) => {
     next(err)
   }
 });
-app.put('/api/notes/:id', async (req, res, next) => {
+app.put('/api/flavors/:id', async (req, res, next) => {
   try {
     const SQL = `
-    UPDATE notes
-    SET txt=$1, ranking=$2, updated_at= now()
+    UPDATE flavors
+    SET name=$1, is_favorite=$2, updated_at=now()
     WHERE id=$3 RETURNING *
   `
-  const response = await client.query(SQL, [req.body.txt, req.body.ranking, req.params.id])
+  const response = await client.query(SQL, [req.body.name, req.body.is_favorite, req.params.id])
   res.send(response.rows[0])
   } catch (err) {
     next(err)
   }
 });
-app.delete('/api/notes/:id', async (req, res, next) => {
+app.delete('/api/flavors/:id', async (req, res, next) => {
   try {
     const SQL = `
-    DELETE from notes
+    DELETE from flavors
     WHERE id=$1
     `
     const response = await client.query(SQL, [req.params.id])
@@ -61,20 +61,23 @@ async function init() {
   await client.connect();
   console.log("connected to db");
   let SQL = `
-    DROP TABLE IF EXISTS notes;
-    CREATE TABLE notes(
+    DROP TABLE IF EXISTS flavors;
+    CREATE TABLE flavors(
     id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    is_favorite BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now(),
-    ranking INTEGER DEFAULT 3 NOT NULL,
-    txt VARCHAR(255) NOT NULL
+    updated_at TIMESTAMP DEFAULT now()
     );`;
   await client.query(SQL);
   console.log("tables created");
   SQL = `
-    INSERT INTO notes(txt, ranking) VALUES('learn express', 5);
-    INSERT INTO notes(txt, ranking) VALUES('write SQL queries', 4);
-    INSERT INTO notes(txt, ranking) VALUES('create routes', 2);
+    INSERT INTO flavors(name, is_favorite) VALUES('Vanilla', true);
+    INSERT INTO flavors(name) VALUES('Chocolate');
+    INSERT INTO flavors(name) VALUES('Strawberry');
+    INSERT INTO flavors(name) VALUES('Rocky Road');
+    INSERT INTO flavors(name) VALUES('Pistachio');
+    INSERT INTO flavors(name) VALUES('Coffee');
     `;
   await client.query(SQL);
   console.log("data seeded");
